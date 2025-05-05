@@ -1,0 +1,72 @@
+# ClickUpAlert
+
+**ClickUpAlert** is a GitHub Action designed to enhance your deployment workflow. It automatically sends a notification message to a specified ClickUp channel (List or Chat View) whenever a deployment occurs. Crucially, this notification includes a concise change log, detailing the commit messages and their authors since the last successful deployment on that branch.
+
+## Inputs
+
+The action requires the following inputs to connect to ClickUp and identify your project, make sure to add them as secrets to your GitHub repository:
+
+| Input                  | Description                                               | Required | Default |
+| ---------------------- | --------------------------------------------------------- | -------- | ------- |
+| `clickup_api_token`    | Your ClickUp API token (Personal or Bot)                  | Yes      | `none`  |
+| `clickup_workspace_id` | The numerical ID of the ClickUp Workspace (Team)          | Yes      | `none`  |
+| `clickup_channel_id`   | The ID of the ClickUp List or Chat View for notifications | Yes      | `none`  |
+| `clickup_project_name` | A descriptive name for your project (used in the message) | Yes      | `none`  |
+
+## Example Usage
+
+Here's how you can integrate `ClickUpAlert` into your deployment workflow. This example triggers on pushes to `release/staging` or manual dispatch.
+
+```yaml
+name: Staging Deployment Notification
+
+on:
+  push:
+    branches:
+      - "release/staging"
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    # Grant permissions needed for checkout and fetching commit history
+    permissions:
+      contents: read # To checkout the code and read commit history
+      actions: read # To find the last successful workflow run for changelog generation
+
+    steps:
+      # Step 1: Check out the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: "release/staging" # Ensure we are on the correct branch
+          fetch-depth: 0 # Fetch all history to enable accurate changelog comparison
+
+      # Add your build, test, and deployment steps here...
+      # Example:
+      # - name: Build Project
+      #   run: npm run build
+      # - name: Deploy to Staging
+      #   run: ./deploy_staging.sh
+
+      # Step 2: Send ClickUp notification upon successful deployment
+      - name: Send ClickUp Notification
+        # This step only runs if all preceding steps in the job were successful
+        if: success()
+        # Replace YOUR_USERNAME/ClickUpAlert with the correct path to the action repository
+        # Use a specific version tag (like @v1.2) for stability
+        uses: YOUR_USERNAME/ClickUpAlert@v1.2
+        with:
+          # Pass the required secrets to the action
+          clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
+          clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
+          clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
+          clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
+```
+
+## Permissions
+
+Your GitHub Action will require the following permissions to access commit history and send notifications to ClickUp:
+
+* contents: read – To access the repository content and commits.
+* actions: read – To fetch previous workflow runs.
