@@ -53,9 +53,8 @@ jobs:
       - name: Send ClickUp Notification
         # This step only runs if all preceding steps in the job were successful
         if: success()
-        # Replace YOUR_USERNAME/ClickUpAlert with the correct path to the action repository
         # Use a specific version tag (like @v1.2) for stability
-        uses: YOUR_USERNAME/ClickUpAlert@v1.2
+        uses: architweb/ClickUpAlert@v1
         with:
           # Pass the required secrets to the action
           clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
@@ -63,10 +62,3 @@ jobs:
           clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
           clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
 ```
-
-## Permissions
-
-Your GitHub Action will require the following permissions to access commit history and send notifications to ClickUp:
-
-* contents: read – To access the repository content and commits.
-* actions: read – To fetch previous workflow runs.
