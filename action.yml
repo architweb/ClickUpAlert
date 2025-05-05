@@ -1,22 +1,27 @@
-name: 'Send ClickUp Notification Action'
-description: 'Fetches commit history (if possible) and sends a notification to ClickUp.'
+name: "Send ClickUp Notification Action"
+
+description: "Fetches commit history (if possible) and sends a notification to ClickUp."
+
+branding:
+  icon: "bell"
+  color: "orange"
 
 inputs:
   clickup_api_token:
-    description: 'ClickUp API Token'
+    description: "ClickUp API Token"
     required: true
   clickup_workspace_id:
-    description: 'ClickUp Workspace ID'
+    description: "ClickUp Workspace ID"
     required: true
   clickup_channel_id:
-    description: 'ClickUp Channel ID'
+    description: "ClickUp Channel ID"
     required: true
   clickup_project_name:
-    description: 'ClickUp Project Name for the message'
+    description: "ClickUp Project Name for the message"
     required: true
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Set Environment Variables
       shell: bash
