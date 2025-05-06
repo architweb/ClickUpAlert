@@ -1,9 +1,34 @@
-# ClickUpAlert
+# ClickUpNotification
 
-**ClickUpAlert** is a GitHub Action designed to enhance your deployment workflow. It automatically sends a notification message to a specified ClickUp channel (List or Chat View) whenever a deployment occurs. Crucially, this notification includes a concise change log, detailing the commit messages and their authors since the last successful deployment on that branch.
+**ClickUpNotification** is a GitHub Action that notifies your team via a ClickUp chat channel, keeping them informed about the progress of the CI/CD pipeline up to the point where this action is triggered.
+It summarizes the latest code changes, grouped by author and formatted as an organized changelog, along with the duration.
+
+## Features
+It'll Send message to ClickUp chat, including:
+- Project name
+- Triggered by
+- Duration
+- Changelog since last run, grouped by author
+  
+## Screenshot
+![Screenshot](assets/screenshot.png)
+
+## Setup on ClickUp
+In order to send messages, you need to create a token from a user. However, the message will appear as if sent by that user.
+So, it is recommended to create a guest user in your team with a name like "GitHub Actions" or "CICD Messenger", then create a token from that account.
+
+To create an **API token** within a guest user account:
+- Log in to the desired account at [ClickUp](https://app.clickup.com).
+- Click on **Settings** from the top-right menu.
+- Click on **Apps** from the side menu.
+- Click **Generate** under **API Token**.
+
+You can copy `clickup_workspace_id` and `clickup_channel_id` by going to the desired chat channel and checking the URL of that page.
+It should contain two numbers in a format like this:
+`https://app.clickup.com/<WORKSPACE_ID>/chat/r/<CHANNEL_ID>`
+Simply copy them from the link.
 
 ## Inputs
-
 The action requires the following inputs to connect to ClickUp and identify your project, make sure to add them as secrets to your GitHub repository:
 
 | Input                  | Description                                               | Required | Default |
@@ -15,7 +40,7 @@ The action requires the following inputs to connect to ClickUp and identify your
 
 ## Example Usage
 
-Here's how you can integrate `ClickUpAlert` into your deployment workflow. This example triggers on pushes to `release/staging` or manual dispatch.
+Here's how you can integrate `ClickUpNotification` into your deployment workflow. This example triggers on pushes to `release/staging` or manual dispatch.
 
 ```yaml
 name: Staging Deployment Notification
@@ -54,7 +79,7 @@ jobs:
         # This step only runs if all preceding steps in the job were successful
         if: success()
         # Use a specific version tag (like @v1.2) for stability
-        uses: architweb/ClickUpAlert@v1
+        uses: architweb/ClickUpNotification@v1
         with:
           # Pass the required secrets to the action
           clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
