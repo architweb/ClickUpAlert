@@ -43,8 +43,6 @@ runs:
       id: duration
       shell: bash
       run: |
-        echo "--- Fetching duration ---"
-
         STARTED_AT=""
         FORMATTED_DURATION="unknown"
 
@@ -61,7 +59,6 @@ runs:
               if [ -n "$START_EPOCH" ] && [ -n "$END_EPOCH" ]; then
                 DURATION=$((END_EPOCH - START_EPOCH))
                 FORMATTED_DURATION=$(printf "%02d:%02d" $((DURATION / 60)) $((DURATION % 60)))
-                echo "--- Run duration: ${FORMATTED_DURATION}min ---"
               fi
             fi
           fi
@@ -73,34 +70,22 @@ runs:
       id: commits
       shell: bash
       run: |
-        echo "--- Starting commit fetching process ---"
-
         COMMIT_LIST_MD=""
 
         if command -v gh &> /dev/null; then
-          # Get workflow ID
           WORKFLOW_ID=""
           WORKFLOW_ID=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/actions/runs/${GITHUB_RUN_ID}" --jq '.workflow_id' 2>/dev/null || echo "")
 
           if [ -n "$WORKFLOW_ID" ]; then
-            echo "--- Found workflow ID for ${GITHUB_REF_NAME} ---"
-
-            # Get previous successful run
             PREVIOUS_SHA=""
             PREVIOUS_SHA=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_ID}/runs?branch=${GITHUB_REF_NAME}&status=success&per_page=1" \
               --jq '.workflow_runs[0].head_sha // empty' 2>/dev/null || echo "")
 
             if [ -n "$PREVIOUS_SHA" ] && [ "$PREVIOUS_SHA" != "$GITHUB_SHA" ]; then
-              echo "--- Fetching commits between ${PREVIOUS_SHA} and ${GITHUB_SHA} ---"
-
-              # Get commits
               COMMITS_JSON=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/compare/${PREVIOUS_SHA}...${GITHUB_SHA}" \
                 --jq '[.commits[] | {sha: .sha, message: .commit.message, author: .commit.author.name}]' 2>/dev/null || echo "[]")
 
               if [ "$COMMITS_JSON" != "[]" ] && [ -n "$COMMITS_JSON" ]; then
-                echo "--- Successfully fetched commit data ---"
-
-                # Process each commit individually to avoid command interpretation issues
                 COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq 'length')
 
                 if [ "$COMMIT_COUNT" -gt 0 ]; then
@@ -120,13 +105,10 @@ runs:
 
                     MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
 
-                    # Skip merge commits (starting with "Merge" or containing "merge")
                     KEY="${AUTHOR}::${MESSAGE}"
                     if [[ ! "$MESSAGE" =~ ^[Mm]erge ]] && [[ -z "${UNIQUE_MESSAGES["$KEY"]}" ]]; then
                       UNIQUE_MESSAGES["$KEY"]=1
                       AUTHOR_COMMITS["$AUTHOR"]+=$'* '"$MESSAGE"$'\n'
-                    else
-                      echo "Skipping merge commit: $MESSAGE"
                     fi
                   done
 
@@ -137,22 +119,15 @@ runs:
                     fi
                   done
 
-                  # Check if we have any non-merge commits
                   if [[ "$COMMIT_LIST_MD" == "\n\n**Change Log:**\n" ]]; then
                     COMMIT_LIST_MD=""
-                    echo "--- No non-merge commits found ---"
                   fi
                 fi
               fi
-            else
-              echo "--- No new commits to fetch ---"
             fi
-          else
-            echo "--- Could not find workflow ID for ${GITHUB_REF_NAME} ---"
           fi
         fi
 
-        # Create a file with the commit list to avoid issues with special characters
         COMMIT_FILE=$(mktemp)
         echo -e "$COMMIT_LIST_MD" > "$COMMIT_FILE"
         echo "COMMIT_FILE=$COMMIT_FILE" >> $GITHUB_OUTPUT
@@ -160,11 +135,8 @@ runs:
     - name: Send ClickUp Notification
       shell: bash
       run: |
-        # Get outputs from previous steps
         FORMATTED_DURATION="${{ steps.duration.outputs.FORMATTED_DURATION }}"
         COMMIT_FILE="${{ steps.commits.outputs.COMMIT_FILE }}"
-
-        echo "--- Preparing and sending ClickUp notification ---"
 
         TRIGGERING_USER_NAME=$(curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -174,16 +146,13 @@ runs:
             TRIGGERING_USER_NAME="${TRIGGERING_ACTOR}"
         fi
 
-        # Basic message content
         BASE_MESSAGE="🚀 **${CLICKUP_PROJECT_NAME}** deployed to **${GITHUB_REF_NAME}**"
         DEPLOY_INFO="_Triggered by: ${TRIGGERING_USER_NAME}"
         [ "$FORMATTED_DURATION" != "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}, Done in: ${FORMATTED_DURATION}min_"
         [ "$FORMATTED_DURATION" == "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}_"
 
-        # Create the final message
         FINAL_MESSAGE="${BASE_MESSAGE}\n\n${DEPLOY_INFO}"
 
-        # Add commit list if available
         if [ -f "$COMMIT_FILE" ] && [ -s "$COMMIT_FILE" ]; then
           COMMIT_LIST=$(cat "$COMMIT_FILE")
           if [ -n "$COMMIT_LIST" ]; then
@@ -191,14 +160,9 @@ runs:
           fi
         fi
 
-        # Save to file and show
         MESSAGE_FILE=$(mktemp)
         echo -e "$FINAL_MESSAGE" > "$MESSAGE_FILE"
 
-        echo "Message content:"
-        cat "$MESSAGE_FILE"
-
-        # Create JSON payload without using variables directly in the JSON structure
         PAYLOAD_FILE=$(mktemp)
         jq -n --arg content "$(cat "$MESSAGE_FILE")" '{
           type: "message",
@@ -206,10 +170,6 @@ runs:
           content: $content
         }' > "$PAYLOAD_FILE"
 
-        echo "JSON payload:"
-        cat "$PAYLOAD_FILE"
-
-        # Send the notification
         RESPONSE_FILE=$(mktemp)
         HTTP_CODE=$(curl -s -o "$RESPONSE_FILE" -w "%{http_code}" \
           -X POST \
@@ -218,14 +178,8 @@ runs:
           -d @"$PAYLOAD_FILE" \
           "https://api.clickup.com/api/v3/workspaces/${{ inputs.clickup_workspace_id }}/chat/channels/${{ inputs.clickup_channel_id }}/messages")
 
-        echo "Response code: $HTTP_CODE"
-        echo "Response body:"
-        cat "$RESPONSE_FILE"
-
-        # Clean up temporary files
         rm -f "$MESSAGE_FILE" "$PAYLOAD_FILE" "$COMMIT_FILE" "$RESPONSE_FILE"
 
-        # Check for success
         if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
           echo "--- ClickUp notification sent successfully ---"
         else
