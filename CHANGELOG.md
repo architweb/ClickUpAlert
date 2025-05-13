@@ -1,9 +1,3 @@
----
-layout: default
-title: Changelog
-nav_order: 3
----
-
 # Changelog
 
 ## [v1.3.0] - 2025-05-13
