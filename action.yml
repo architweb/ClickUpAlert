@@ -110,7 +110,14 @@ runs:
                   declare -A UNIQUE_MESSAGES
 
                   for ((i=0; i<$COMMIT_COUNT; i++)); do
-                    AUTHOR=$(echo "$COMMITS_JSON" | jq -r ".[$i].author")
+                    RAW_AUTHOR=$(echo "$COMMITS_JSON" | jq -r ".[$i].author")
+                    AUTHOR=$(echo "$RAW_AUTHOR" | tr -c '[:alnum:] ' ' ' | tr -s ' ')
+                    AUTHOR=$(echo "$AUTHOR" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+
+                    if [ -z "$AUTHOR" ]; then
+                      AUTHOR="Unknown Contributor"
+                    fi
+
                     MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
 
                     # Skip merge commits (starting with "Merge" or containing "merge")
