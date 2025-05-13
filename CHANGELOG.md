@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.4.0] - 2025-05-13
+
+### Added
+
+- Added automatic ClickUp task link creation from commit messages
+- Added support for detecting task IDs in format `task-id: \`TASK_ID\`` in commit messages
+- Added conversion of task IDs to clickable links in notification messages
+- Support for alphanumeric task IDs (like "86eqv0y92")
+- Enhanced message formatting to show task ID as clickable link with pipe separator format
+
 ## [v1.3.0] - 2025-05-13
 
 ### Improved
