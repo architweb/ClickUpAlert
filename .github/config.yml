@@ -1,0 +1,8 @@
+# Configuration for GitHub repository
+# This file configures which files appear in the repository header tabs
+
+# Display the CHANGELOG.md file in the repository header
+changelog:
+  enabled: true
+  path: CHANGELOG.md
+  label: Changelog
