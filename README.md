@@ -11,6 +11,7 @@ It'll Send message to ClickUp chat, including:
 - Triggered by
 - Duration
 - Changelog since last run, grouped by author
+- Automatic ClickUp task links from commit messages
 
 ## Screenshot
 
@@ -44,6 +45,25 @@ The action requires the following inputs to connect to ClickUp and identify your
 | `clickup_channel_id`   | The ID of the ClickUp List or Chat View for notifications | Yes      | `none`  |
 | `clickup_project_name` | A descriptive name for your project (used in the message) | Yes      | `none`  |
 
+## Task ID Integration
+
+You can link commit messages directly to ClickUp tasks by including a task ID reference in your commit message using the following format:
+
+```
+task-id: `TASK_ID` Your commit message here
+```
+
+For example:
+```
+task-id: `86ddd0y92` Add new login functionality
+```
+
+The action will automatically convert this into a clickable link in the ClickUp notification:
+
+[\`86ddd0y92\`](https://github.com/architweb/ClickUpNotification) | Add new login functionality
+
+Where the task ID becomes a clickable link to the task in ClickUp. This makes it easy for your team to navigate directly to the relevant tasks from deployment notifications.
+
 ## Example Usage
 
 Here's how you can integrate `ClickUpNotification` into your deployment workflow. This example triggers on pushes to `release/staging` or manual dispatch.
@@ -73,16 +93,16 @@ jobs:
           ref: "release/staging" # Ensure we are on the correct branch
           fetch-depth: 0 # Fetch all history to enable accurate changelog comparison
 
-      # Add your build, test, and deployment steps here...
+      # Step 2: Add your build, test, and deployment steps here...
       # Example:
       # - name: Build Project
       #   run: npm run build
       # - name: Deploy to Staging
       #   run: ./deploy_staging.sh
 
-      # Step 2: Send ClickUp notification upon successful deployment
+      # Last step: Send ClickUp notification upon successful deployment
       - name: Send ClickUp Notification
-        # Use a specific version tag (like @v1.3) for stability
+        # Use a specific version tag (like @v1.4.0) for stability
         uses: architweb/ClickUpNotification@v1
         with:
           # Pass the required secrets to the action
