@@ -4,20 +4,25 @@
 It summarizes the latest code changes, grouped by author and formatted as an organized changelog, along with the duration.
 
 ## Features
+
 It'll Send message to ClickUp chat, including:
+
 - Project name
 - Triggered by
 - Duration
 - Changelog since last run, grouped by author
-  
+
 ## Screenshot
+
 ![Screenshot](assets/screenshot.png)
 
 ## Setup on ClickUp
+
 In order to send messages, you need to create a token from a user. However, the message will appear as if sent by that user.
-So, it is recommended to create a guest user in your team with a name like "GitHub Actions" or "CICD Messenger", then create a token from that account.
+So, it is recommended to create a guest user in your team with a name like "GitHub Actions" or "CI/CD Messenger", then create a token from that account.
 
 To create an **API token** within a guest user account:
+
 - Log in to the desired account at [ClickUp](https://app.clickup.com).
 - Click on **Settings** from the top-right menu.
 - Click on **Apps** from the side menu.
@@ -29,6 +34,7 @@ It should contain two numbers in a format like this:
 Simply copy them from the link.
 
 ## Inputs
+
 The action requires the following inputs to connect to ClickUp and identify your project, make sure to add them as secrets to your GitHub repository:
 
 | Input                  | Description                                               | Required | Default |
@@ -76,9 +82,7 @@ jobs:
 
       # Step 2: Send ClickUp notification upon successful deployment
       - name: Send ClickUp Notification
-        # This step only runs if all preceding steps in the job were successful
-        if: success()
-        # Use a specific version tag (like @v1.2) for stability
+        # Use a specific version tag (like @v1.3) for stability
         uses: architweb/ClickUpNotification@v1
         with:
           # Pass the required secrets to the action
