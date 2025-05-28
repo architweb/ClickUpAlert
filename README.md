@@ -50,12 +50,12 @@ The action requires the following inputs to connect to ClickUp and identify your
 You can link commit messages directly to ClickUp tasks by including a task ID reference in your commit message using the following format:
 
 ```
-task-id: `TASK_ID` Your commit message here
+task `TASK_ID` Your commit message here
 ```
 
 For example:
 ```
-task-id: `86ddd0y92` Add new login functionality
+task `86ddd0y92` Add new login functionality
 ```
 
 The action will automatically convert this into a clickable link in the ClickUp notification:

@@ -105,11 +105,11 @@ runs:
 
                     MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
 
-                    if [[ "$MESSAGE" =~ task-id:\ \`([0-9a-z]+)\` ]]; then
+                    if [[ "$MESSAGE" =~ task\ \`([0-9a-z]+)\` ]]; then
                       TASK_ID="${BASH_REMATCH[1]}"
                       TASK_LINK="[\`${TASK_ID}\`](https://app.clickup.com/t/${TASK_ID})"
 
-                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task-id: \`${TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
+                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
                       MESSAGE="${TASK_LINK} | ${MESSAGE_CONTENT}"
                     fi
 
