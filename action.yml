@@ -70,29 +70,21 @@ runs:
       id: commits
       shell: bash
       run: |
-        echo "Starting Fetch Commits Step..."
-
         COMMIT_LIST_MD=""
 
         if command -v gh &> /dev/null; then
-          echo "gh CLI found"
           WORKFLOW_ID=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/actions/runs/${GITHUB_RUN_ID}" --jq '.workflow_id' 2>/dev/null || echo "")
-          echo "WORKFLOW_ID: $WORKFLOW_ID"
 
           if [ -n "$WORKFLOW_ID" ]; then
             PREVIOUS_SHA=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_ID}/runs?branch=${GITHUB_REF_NAME}&status=success&per_page=1" \
               --jq '.workflow_runs[0].head_sha // empty' 2>/dev/null || echo "")
-            echo "PREVIOUS_SHA: $PREVIOUS_SHA"
-            echo "CURRENT_SHA: $GITHUB_SHA"
 
             if [ -n "$PREVIOUS_SHA" ] && [ "$PREVIOUS_SHA" != "$GITHUB_SHA" ]; then
               COMMITS_JSON=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/compare/${PREVIOUS_SHA}...${GITHUB_SHA}" \
                 --jq '[.commits[] | {sha: .sha, message: .commit.message, author: .commit.author.name}]' 2>/dev/null || echo "[]")
-              echo "COMMITS_JSON: $COMMITS_JSON"
 
               if [ "$COMMITS_JSON" != "[]" ] && [ -n "$COMMITS_JSON" ]; then
                 COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq 'length')
-                echo "COMMIT_COUNT: $COMMIT_COUNT"
 
                 if [ "$COMMIT_COUNT" -gt 0 ]; then
                   COMMIT_LIST_MD="\n\n**Change Log:**\n"
@@ -115,9 +107,6 @@ runs:
                       MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
                       MESSAGE="${TASK_LINK} | ${MESSAGE_CONTENT}"
                     fi
-
-                    echo "AUTHOR: $AUTHOR"
-                    echo "MESSAGE: $MESSAGE"
 
                     KEY="${AUTHOR}::${MESSAGE}"
                     if [[ ! "$MESSAGE" =~ ^[Mm]erge ]]; then
@@ -164,11 +153,7 @@ runs:
               fi
             fi
           fi
-        else
-          echo "gh CLI not found"
         fi
-
-        echo -e "COMMIT_LIST_MD:\n$COMMIT_LIST_MD"
 
         COMMIT_FILE=$(mktemp)
         echo -e "$COMMIT_LIST_MD" > "$COMMIT_FILE"
