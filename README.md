@@ -102,7 +102,7 @@ jobs:
 
       # Last step: Send ClickUp notification upon successful deployment
       - name: Send ClickUp Notification
-        # Use a specific version tag (like @v1.4.0) for stability
+        # Use a specific version tag (like @v1.4.2) for stability
         uses: architweb/ClickUpNotification@v1
         with:
           # Pass the required secrets to the action

@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.4.2] - 2025-05-28
+
+### Added
+
+- Added support for running the workflow on macOS.
+
+### Changed
+
+- Changed commit message keyword for task ID detection from "task-id:" to "task:".
+
 ## [v1.4.0] - 2025-05-13
 
 ### Added
