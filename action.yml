@@ -89,9 +89,11 @@ runs:
                 COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq 'length')
 
                 if [ "$COMMIT_COUNT" -gt 0 ]; then
-                  PROCESSED_KEYS_FILE=$(mktemp)
-                  TEMP_COMMIT_DATA_FILE=$(mktemp)
-                  HAS_UNIQUE_COMMITS=0 # Flag to see if we process any valid commits
+                  COMMIT_LIST_MD="\n\n**Change Log:**\n"
+
+                  AUTHOR_LIST=()
+                  AUTHOR_COMMITS_LIST=()
+                  UNIQUE_KEYS=()
 
                   for ((i=0; i<$COMMIT_COUNT; i++)); do
                     RAW_AUTHOR=$(echo "$COMMITS_JSON" | jq -r ".[$i].author")
@@ -102,62 +104,49 @@ runs:
                       AUTHOR="Unknown Contributor"
                     fi
 
-                    MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p') # Get first line
+                    MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
 
-                    if [[ "$MESSAGE" =~ task\\\ \\\`([0-9a-z]+)\\\` ]]; then
+                    if [[ "$MESSAGE" =~ task\ \`([0-9a-z]+)\` ]]; then
                       TASK_ID="${BASH_REMATCH[1]}"
-                      TASK_LINK="[\\\`${TASK_ID}\\\`](https://app.clickup.com/t/${TASK_ID})"
-                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \\\`${TASK_ID}\\\`//g" | sed -e 's/^[[:space:]]*//')
+                      TASK_LINK="[\`${TASK_ID}\`](https://app.clickup.com/t/${TASK_ID})"
+
+                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
                       MESSAGE="${TASK_LINK} | ${MESSAGE_CONTENT}"
                     fi
 
-                    KEY="${AUTHOR}::${MESSAGE}" # Original key for deduplication
-
-                    # Deduplication and non-merge check
+                    KEY="${AUTHOR}::${MESSAGE}"
                     if [[ ! "$MESSAGE" =~ ^[Mm]erge ]]; then
-                      if ! grep -qFx "$KEY" "$PROCESSED_KEYS_FILE"; then
-                        echo "$KEY" >> "$PROCESSED_KEYS_FILE"
+                      if [[ ! " ${UNIQUE_KEYS[*]} " =~ " ${KEY} " ]]; then
+                        UNIQUE_KEYS+=("$KEY")
 
-                        echo "${AUTHOR}@@@DELIMITER@@@* ${MESSAGE}" >> "$TEMP_COMMIT_DATA_FILE"
-                        HAS_UNIQUE_COMMITS=1
+                        FOUND=0
+                        for i in "${!AUTHOR_LIST[@]}"; do
+                          if [[ "${AUTHOR_LIST[$i]}" == "$AUTHOR" ]]; then
+                            AUTHOR_COMMITS_LIST[$i]+=$'* '"$MESSAGE"$'\n'
+                            FOUND=1
+                            break
+                          fi
+                        done
+
+                        if [[ $FOUND -eq 0 ]]; then
+                          AUTHOR_LIST+=("$AUTHOR")
+                          AUTHOR_COMMITS_LIST+=($'* '"$MESSAGE"$'\n')
+                        fi
                       fi
                     fi
                   done
 
-                  if [ "$HAS_UNIQUE_COMMITS" -eq 1 ]; then
-                    COMMIT_LIST_MD_ACCUMULATOR="\\n\\n**Change Log:**\\n" # Initialize header
-                    ANY_CONTENT_ADDED_TO_CHANGELOG=0
-
-                    if [ -s "$TEMP_COMMIT_DATA_FILE" ]; then
-                        UNIQUE_AUTHORS_LIST=$(awk -F'@@@DELIMITER@@@' '{print $1}' "$TEMP_COMMIT_DATA_FILE" | sort -u)
-
-                        if [ -n "$UNIQUE_AUTHORS_LIST" ]; then
-                            OLD_IFS=$IFS
-                            IFS=$'\\n' # Handle authors with spaces correctly in the loop
-                            for CURRENT_AUTHOR in $UNIQUE_AUTHORS_LIST; do
-                                COMMIT_LIST_MD_ACCUMULATOR+=$'\\n'"_*${CURRENT_AUTHOR}:*_\n"
-
-                                awk -F'@@@DELIMITER@@@' -v author_val="$CURRENT_AUTHOR" '$1 == author_val {print $2}' "$TEMP_COMMIT_DATA_FILE" | while IFS= read -r MESSAGE_LINE; do
-                                    COMMIT_LIST_MD_ACCUMULATOR+="${MESSAGE_LINE}"$'\\n'
-                                    ANY_CONTENT_ADDED_TO_CHANGELOG=1 # Mark that actual content was added
-                                done
-                            done
-                            IFS=$OLD_IFS
-
-                            if [ "$ANY_CONTENT_ADDED_TO_CHANGELOG" -eq 1 ]; then
-                                COMMIT_LIST_MD="$COMMIT_LIST_MD_ACCUMULATOR"
-                            else
-                                COMMIT_LIST_MD="" # Header was prepared, but no actual commit lines for any author.
-                            fi
-                        fi
+                  for i in "${!AUTHOR_LIST[@]}"; do
+                    AUTHOR="${AUTHOR_LIST[$i]}"
+                    COMMITS="${AUTHOR_COMMITS_LIST[$i]}"
+                    if [ -n "$COMMITS" ]; then
+                      COMMIT_LIST_MD+=$'\n'"_*$AUTHOR:*_\n$COMMITS"
                     fi
-                  else
-                    COMMIT_LIST_MD="" # No unique, non-merge commits found.
-                  fi
+                  done
 
-                  rm -f "$PROCESSED_KEYS_FILE" "$TEMP_COMMIT_DATA_FILE"
-                else
-                  COMMIT_LIST_MD=""
+                  if [[ "$COMMIT_LIST_MD" == "\n\n**Change Log:**\n" ]]; then
+                    COMMIT_LIST_MD=""
+                  fi
                 fi
               fi
             fi
