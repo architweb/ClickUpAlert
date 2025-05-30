@@ -100,21 +100,33 @@ runs:
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
                     MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
+                    
 
-                    if [[ "$MESSAGE" =~ task\ \`([0-9a-z]+)\` ]]; then
+                    # Adding support for custom task IDs and multiple IDs
+                    # Accumulate all task links
+                    LINKS=()
+
+                    # Collect and replace all `ctask` references
+                    while [[ "$MESSAGE" =~ ctask\ \`([A-Za-z0-9\-]+)\` ]]; do
+                      CUSTOM_TASK_ID="${BASH_REMATCH[1]}"
+                      CUSTOM_TASK_ID_LINK="[\`${CUSTOM_TASK_ID}\`](https://app.clickup.com/t/${CLICKUP_WORKSPACE_ID}/${CUSTOM_TASK_ID})"
+                      LINKS+=("$CUSTOM_TASK_ID_LINK")
+                      MESSAGE=$(echo "$MESSAGE" | sed "0,/ctask \`${CUSTOM_TASK_ID}\`/{s/ctask \`${CUSTOM_TASK_ID}\`//}" | sed -e 's/^[[:space:]]*//')
+                    done
+
+                    # Collect and replace all `task` references
+                    while [[ "$MESSAGE" =~ task\ \`([0-9a-z]+)\` ]]; do
                       TASK_ID="${BASH_REMATCH[1]}"
                       TASK_LINK="[\`${TASK_ID}\`](https://app.clickup.com/t/${TASK_ID})"
-                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
-                      MESSAGE="${TASK_LINK} | ${MESSAGE_CONTENT}"
+                      LINKS+=("$TASK_LINK")
+                      MESSAGE=$(echo "$MESSAGE" | sed "0,/task \`${TASK_ID}\`/{s/task \`${TASK_ID}\`//}" | sed -e 's/^[[:space:]]*//')
+                    done
+
+                    # Combine all links and message
+                    if [ "${#LINKS[@]}" -gt 0 ]; then
+                      MESSAGE="$(IFS=" | "; echo "${LINKS[*]}") | ${MESSAGE}"
                     fi
 
-
-                    if [[ "$MESSAGE" =~ ctask\ \`([A-Za-z0-9-]+)\` ]]; then
-                      CUSTOM_TASK_ID="${BASH_REMATCH[1]}"
-                      CUSTOM_TASK_ID_LINK="[\`${CUSTOM_TASK_ID}\`](https://app.clickup.com/t/${{ inputs.clickup_workspace_id }}/${CUSTOM_TASK_ID})"
-                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${CUSTOM_TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
-                      MESSAGE="${CUSTOM_TASK_ID_LINK} | ${MESSAGE_CONTENT}"
-                    fi
 
                     KEY="${AUTHOR}::${MESSAGE}"
                     if [[ ! "$MESSAGE" =~ ^[Mm]erge ]]; then
