@@ -108,6 +108,14 @@ runs:
                       MESSAGE="${TASK_LINK} | ${MESSAGE_CONTENT}"
                     fi
 
+
+                    if [[ "$MESSAGE" =~ ctask\ \`([A-Za-z0-9-]+)\` ]]; then
+                      CUSTOM_TASK_ID="${BASH_REMATCH[1]}"
+                      CUSTOM_TASK_ID_LINK="[\`${CUSTOM_TASK_ID}\`](https://app.clickup.com/t/${{ inputs.clickup_workspace_id }}/${CUSTOM_TASK_ID})"
+                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${CUSTOM_TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
+                      MESSAGE="${CUSTOM_TASK_ID_LINK} | ${MESSAGE_CONTENT}"
+                    fi
+
                     KEY="${AUTHOR}::${MESSAGE}"
                     if [[ ! "$MESSAGE" =~ ^[Mm]erge ]]; then
                       IS_UNIQUE=true
