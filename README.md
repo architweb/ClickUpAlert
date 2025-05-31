@@ -11,11 +11,15 @@ It'll Send message to ClickUp chat, including:
 - Triggered by
 - Duration
 - Changelog since last run, grouped by author
-- Automatic ClickUp task links from commit messages
+- Automatic ClickUp task links from (custom) task IDs in commit messages
+- Single line or full commit message mode
+- Emphasizes Conventional Commit types
 
 ## Screenshot
 
 ![Screenshot](assets/screenshot.png)
+
+![Screenshot-multiline](assets/screenshot-multiline.png)
 
 ## Setup on ClickUp
 
@@ -51,22 +55,28 @@ You can link commit messages directly to ClickUp tasks by including a task ID re
 
 ```
 task `TASK_ID` Your commit message here
+
+ctask `CUSTOM_TASK_ID` Your commit message here
 ```
 
 For example:
 ```
 task `86ddd0y92` Add new login functionality
+
+ctask `TST-747` Add global log out functionality
 ```
 
 The action will automatically convert this into a clickable link in the ClickUp notification:
 
 [\`86ddd0y92\`](https://github.com/architweb/ClickUpNotification) | Add new login functionality
 
+[\`TST-747\`](https://github.com/architweb/ClickUpNotification) | Add global log out functionality
+
 Where the task ID becomes a clickable link to the task in ClickUp. This makes it easy for your team to navigate directly to the relevant tasks from deployment notifications.
 
 ## Example Usage
 
-Here's how you can integrate `ClickUpNotification` into your deployment workflow. This example triggers on pushes to `release/staging` or manual dispatch.
+Here's how you can integrate `ClickUpNotification` into your deployment workflow. This example triggers on pushes to `release/staging` or manual dispatch with full commit message mode enabled.
 
 ```yaml
 name: Staging Deployment Notification
@@ -110,4 +120,6 @@ jobs:
           clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
           clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
           clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
+          # Comment out option below to disable and default to single line mode because it activates with any value, "true", "false", "banana"
+          full_commit_message: true
 ```
