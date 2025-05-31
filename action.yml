@@ -19,6 +19,11 @@ inputs:
   clickup_project_name:
     description: "ClickUp Project Name for the message"
     required: true
+# Support for full commit message added    
+  full_commit_message:
+    description: "Use the full commit message instead of the first line"
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -38,6 +43,7 @@ runs:
         echo "TRIGGERING_ACTOR=$GITHUB_ACTOR" >> $GITHUB_ENV
         echo "RUN_ID=$GITHUB_RUN_ID" >> $GITHUB_ENV
         echo "REPO=$GITHUB_REPOSITORY" >> $GITHUB_ENV
+        echo "INPUT_FULL_COMMIT_MESSAGE=${{ inputs.full_commit_message }}" >> $GITHUB_ENV
 
     - name: Fetch Duration
       id: duration
@@ -93,23 +99,58 @@ runs:
                   AUTHOR_COMMITS_LIST=()
                   UNIQUE_KEYS=()
 
-                  for ((i=0; i<$COMMIT_COUNT; i++)); do
+                  for ((i=0; i<COMMIT_COUNT; i++)); do
                     RAW_AUTHOR=$(echo "$COMMITS_JSON" | jq -r ".[$i].author")
                     AUTHOR=$(echo "$RAW_AUTHOR" | tr -c '[:alnum:] ' ' ' | tr -s ' ')
                     AUTHOR=$(echo "$AUTHOR" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
-                    MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
+                    # Logic for full commit message mode
+                    if [[ -n "${INPUT_FULL_COMMIT_MESSAGE}" ]]; then
+                      RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
 
-                    if [[ "$MESSAGE" =~ task\ \`([0-9a-z]+)\` ]]; then
-                      TASK_ID="${BASH_REMATCH[1]}"
-                      TASK_LINK="[\`${TASK_ID}\`](https://app.clickup.com/t/${TASK_ID})"
-                      MESSAGE_CONTENT=$(echo "$MESSAGE" | sed "s/task \`${TASK_ID}\`//g" | sed -e 's/^[[:space:]]*//')
-                      MESSAGE="${TASK_LINK} | ${MESSAGE_CONTENT}"
+                      # Inline task id(task)/custom task id(ctask) replacement
+                      FORMATTED_MESSAGE=$(echo "$RAW_MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
+                      FORMATTED_MESSAGE=$(echo "$FORMATTED_MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
+
+                      # Detect and embolden Conventional Commit type prefixes
+                      HEADER_LINE=$(echo "$FORMATTED_MESSAGE" | sed -n '1p')
+                      BODY_LINES=$(echo "$FORMATTED_MESSAGE" | sed '1d')
+
+                      if echo "$HEADER_LINE" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:'; then
+                        HEADER_LINE="**${HEADER_LINE}**"
+                      fi
+
+                      # If commit has bullet points, compose them as indented bullet points below the first line of the commit
+                      if echo "$BODY_LINES" | grep -qE '^\s*[\*\-\+]'; then
+                      
+                        INDENTED_BODY=$(echo "$BODY_LINES" | sed -E 's/^\s*([\*\-\+])/    \1   /')
+                      else
+                        INDENTED_BODY=$(echo "$BODY_LINES" | sed 's/^/    /')
+                      fi
+
+                      FINAL_COMMIT_BLOCK="*   ${HEADER_LINE}"
+                      [ -n "$BODY_LINES" ] && FINAL_COMMIT_BLOCK="${FINAL_COMMIT_BLOCK}"$'\n'"${INDENTED_BODY}"
+
+                    else
+                      MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
+
+                      # Inline task id(task)/custom task id(ctask) replacement
+                      MESSAGE=$(echo "$MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
+                      MESSAGE=$(echo "$MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
+
+                      # Detect and embolden only the Conventional Commit prefix
+                      if echo "$MESSAGE" | grep -qE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)'; then
+                        PREFIX=$(echo "$MESSAGE" | grep -oE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)')
+                        REST="${MESSAGE#$PREFIX }"
+                        MESSAGE="**${PREFIX}** ${REST}"
+                      fi
+
+                      FINAL_COMMIT_BLOCK="* ${MESSAGE}"
                     fi
 
-                    KEY="${AUTHOR}::${MESSAGE}"
-                    if [[ ! "$MESSAGE" =~ ^[Mm]erge ]]; then
+                    KEY="${AUTHOR}::${FINAL_COMMIT_BLOCK}"
+                    if [[ ! "$FINAL_COMMIT_BLOCK" =~ ^[Mm]erge ]]; then
                       IS_UNIQUE=true
                       for existing_key in "${UNIQUE_KEYS[@]}"; do
                         if [[ "$existing_key" == "$KEY" ]]; then
@@ -124,7 +165,7 @@ runs:
                         FOUND=false
                         for j in "${!AUTHOR_LIST[@]}"; do
                           if [[ "${AUTHOR_LIST[$j]}" == "$AUTHOR" ]]; then
-                            AUTHOR_COMMITS_LIST[$j]+="* $MESSAGE"$'\n'
+                            AUTHOR_COMMITS_LIST[$j]+="${FINAL_COMMIT_BLOCK}"$'\n'
                             FOUND=true
                             break
                           fi
@@ -132,7 +173,7 @@ runs:
 
                         if ! $FOUND; then
                           AUTHOR_LIST+=("$AUTHOR")
-                          AUTHOR_COMMITS_LIST+=("* $MESSAGE"$'\n')
+                          AUTHOR_COMMITS_LIST+=("${FINAL_COMMIT_BLOCK}"$'\n')
                         fi
                       fi
                     fi
