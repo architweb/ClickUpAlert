@@ -19,7 +19,6 @@ inputs:
   clickup_project_name:
     description: "ClickUp Project Name for the message"
     required: true
-# Support for full commit message added    
   full_commit_message:
     description: "Use the full commit message instead of the first line"
     required: false
@@ -43,7 +42,7 @@ runs:
         echo "TRIGGERING_ACTOR=$GITHUB_ACTOR" >> $GITHUB_ENV
         echo "RUN_ID=$GITHUB_RUN_ID" >> $GITHUB_ENV
         echo "REPO=$GITHUB_REPOSITORY" >> $GITHUB_ENV
-        echo "INPUT_FULL_COMMIT_MESSAGE=${{ inputs.full_commit_message }}" >> $GITHUB_ENV
+        echo "FULL_COMMIT_MESSAGE=${{ inputs.full_commit_message }}" >> $GITHUB_ENV
 
     - name: Fetch Duration
       id: duration
@@ -105,15 +104,12 @@ runs:
                     AUTHOR=$(echo "$AUTHOR" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
-                    # Logic for full commit message mode
-                    if [[ -n "${INPUT_FULL_COMMIT_MESSAGE}" ]]; then
+                    if [[ -n "${FULL_COMMIT_MESSAGE}" ]]; then
                       RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
 
-                      # Inline task id(task)/custom task id(ctask) replacement
                       FORMATTED_MESSAGE=$(echo "$RAW_MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
                       FORMATTED_MESSAGE=$(echo "$FORMATTED_MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
 
-                      # Detect and embolden Conventional Commit type prefixes
                       HEADER_LINE=$(echo "$FORMATTED_MESSAGE" | sed -n '1p')
                       BODY_LINES=$(echo "$FORMATTED_MESSAGE" | sed '1d')
 
@@ -121,9 +117,8 @@ runs:
                         HEADER_LINE="**${HEADER_LINE}**"
                       fi
 
-                      # If commit has bullet points, compose them as indented bullet points below the first line of the commit
                       if echo "$BODY_LINES" | grep -qE '^\s*[\*\-\+]'; then
-                      
+
                         INDENTED_BODY=$(echo "$BODY_LINES" | sed -E 's/^\s*([\*\-\+])/    \1   /')
                       else
                         INDENTED_BODY=$(echo "$BODY_LINES" | sed 's/^/    /')
@@ -135,11 +130,9 @@ runs:
                     else
                       MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
 
-                      # Inline task id(task)/custom task id(ctask) replacement
                       MESSAGE=$(echo "$MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
                       MESSAGE=$(echo "$MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
 
-                      # Detect and embolden only the Conventional Commit prefix
                       if echo "$MESSAGE" | grep -qE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)'; then
                         PREFIX=$(echo "$MESSAGE" | grep -oE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)')
                         REST="${MESSAGE#$PREFIX }"
