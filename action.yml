@@ -43,6 +43,7 @@ runs:
         echo "TRIGGERING_ACTOR=$GITHUB_ACTOR" >> $GITHUB_ENV
         echo "RUN_ID=$GITHUB_RUN_ID" >> $GITHUB_ENV
         echo "REPO=$GITHUB_REPOSITORY" >> $GITHUB_ENV
+        echo "INPUT_FULL_COMMIT_MESSAGE=${{ inputs.full_commit_message }}" >> $GITHUB_ENV
 
     - name: Fetch Duration
       id: duration
@@ -105,8 +106,7 @@ runs:
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
                     # Logic for full commit message mode
-                    FULL_COMMIT_MESSAGE="${{ inputs.full_commit_message }}"
-                    if [[ -n "$FULL_COMMIT_MESSAGE" ]]; then
+                    if [[ -n "${INPUT_FULL_COMMIT_MESSAGE}" ]]; then
                       RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
 
                       # Inline task id(task)/custom task id(ctask) replacement
