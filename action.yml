@@ -117,7 +117,7 @@ runs:
                       HEADER_LINE=$(echo "$FORMATTED_MESSAGE" | sed -n '1p')
                       BODY_LINES=$(echo "$FORMATTED_MESSAGE" | sed '1d')
 
-                      if [[ "$HEADER_LINE" =~ ^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?: ]]; then
+                      if echo "$HEADER_LINE" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:'; then
                         HEADER_LINE="**${HEADER_LINE}**"
                       fi
 
@@ -140,7 +140,7 @@ runs:
                       MESSAGE=$(echo "$MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
 
                       # Detect and embolden Conventional Commit type prefixes
-                      if [[ "$MESSAGE" =~ ^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?: ]]; then
+                      if echo "$MESSAGE" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:'; then
                         MESSAGE="**${MESSAGE}**"
                       fi
 
