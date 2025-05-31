@@ -104,7 +104,7 @@ runs:
                     AUTHOR=$(echo "$AUTHOR" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
-                    if [[ -n "${FULL_COMMIT_MESSAGE}" == "true" ]]; then
+                    if [[ "${FULL_COMMIT_MESSAGE}" == "true" ]]; then
                       RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
 
                       FORMATTED_MESSAGE=$(echo "$RAW_MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
