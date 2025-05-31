@@ -15,11 +15,10 @@ It'll Send message to ClickUp chat, including:
 - Single line or full commit message mode
 - Emphasizes Conventional Commit types
 
-## Screenshot
+## Screenshots
 
-![Screenshot](assets/screenshot.png)
-
-![Screenshot-multiline](assets/screenshot-multiline.png)
+<img src="assets/screenshot.png" alt="Screenshot" style="width:90%;">
+<img src="assets/screenshot-multiline.png" alt="Screenshot-multiline" style="width:90%;">
 
 ## Setup on ClickUp
 
