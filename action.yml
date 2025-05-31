@@ -19,6 +19,11 @@ inputs:
   clickup_project_name:
     description: "ClickUp Project Name for the message"
     required: true
+# Support for full commit message added    
+  full_commit_message:
+    description: "Use the full commit message instead of the first line"
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -93,43 +98,56 @@ runs:
                   AUTHOR_COMMITS_LIST=()
                   UNIQUE_KEYS=()
 
-                  for ((i=0; i<$COMMIT_COUNT; i++)); do
+                  for ((i=0; i<COMMIT_COUNT; i++)); do
                     RAW_AUTHOR=$(echo "$COMMITS_JSON" | jq -r ".[$i].author")
                     AUTHOR=$(echo "$RAW_AUTHOR" | tr -c '[:alnum:] ' ' ' | tr -s ' ')
                     AUTHOR=$(echo "$AUTHOR" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
-                    MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
-                    
+                    # Logic for full commit message mode
+                    if [[ "${{ inputs.full_commit_message }}" != "" ]]; then
+                      RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
 
-                    # Adding support for custom task IDs and multiple IDs
-                    # Accumulate all task links
-                    LINKS=()
+                      # Inline task id(task)/custom task id(ctask) replacement
+                      FORMATTED_MESSAGE=$(echo "$RAW_MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
+                      FORMATTED_MESSAGE=$(echo "$FORMATTED_MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
 
-                    # Collect and replace all `ctask` references
-                    while [[ "$MESSAGE" =~ ctask\ \`([A-Za-z0-9\-]+)\` ]]; do
-                      CUSTOM_TASK_ID="${BASH_REMATCH[1]}"
-                      CUSTOM_TASK_ID_LINK="[\`${CUSTOM_TASK_ID}\`](https://app.clickup.com/t/${CLICKUP_WORKSPACE_ID}/${CUSTOM_TASK_ID})"
-                      LINKS+=("$CUSTOM_TASK_ID_LINK")
-                      MESSAGE=$(echo "$MESSAGE" | sed "0,/ctask \`${CUSTOM_TASK_ID}\`/{s/ctask \`${CUSTOM_TASK_ID}\`//}" | sed -e 's/^[[:space:]]*//')
-                    done
+                      # Detect and embolden Conventional Commit type prefixes
+                      HEADER_LINE=$(echo "$FORMATTED_MESSAGE" | sed -n '1p')
+                      BODY_LINES=$(echo "$FORMATTED_MESSAGE" | sed '1d')
 
-                    # Collect and replace all `task` references
-                    while [[ "$MESSAGE" =~ task\ \`([0-9a-z]+)\` ]]; do
-                      TASK_ID="${BASH_REMATCH[1]}"
-                      TASK_LINK="[\`${TASK_ID}\`](https://app.clickup.com/t/${TASK_ID})"
-                      LINKS+=("$TASK_LINK")
-                      MESSAGE=$(echo "$MESSAGE" | sed "0,/task \`${TASK_ID}\`/{s/task \`${TASK_ID}\`//}" | sed -e 's/^[[:space:]]*//')
-                    done
+                      if [[ "$HEADER_LINE" =~ ^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?: ]]; then
+                        HEADER_LINE="**${HEADER_LINE}**"
+                      fi
 
-                    # Combine all links and message
-                    if [ "${#LINKS[@]}" -gt 0 ]; then
-                      MESSAGE="$(IFS=" | "; echo "${LINKS[*]}") | ${MESSAGE}"
+                      # If commit has bullet points, compose them as indented bullet points below the first line of the commit
+                      if echo "$BODY_LINES" | grep -qE '^\s*[\*\-\+]'; then
+                      
+                        INDENTED_BODY=$(echo "$BODY_LINES" | sed -E 's/^\s*([\*\-\+])/    \1   /')
+                      else
+                        INDENTED_BODY=$(echo "$BODY_LINES" | sed 's/^/    /')
+                      fi
+
+                      FINAL_COMMIT_BLOCK="*   ${HEADER_LINE}"
+                      [ -n "$BODY_LINES" ] && FINAL_COMMIT_BLOCK="${FINAL_COMMIT_BLOCK}"$'\n'"${INDENTED_BODY}"
+
+                    else
+                      MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
+
+                      # Inline task id(task)/custom task id(ctask) replacement
+                      MESSAGE=$(echo "$MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
+                      MESSAGE=$(echo "$MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
+
+                      # Detect and embolden Conventional Commit type prefixes
+                      if [[ "$MESSAGE" =~ ^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?: ]]; then
+                        MESSAGE="**${MESSAGE}**"
+                      fi
+
+                      FINAL_COMMIT_BLOCK="* ${MESSAGE}"
                     fi
 
-
-                    KEY="${AUTHOR}::${MESSAGE}"
-                    if [[ ! "$MESSAGE" =~ ^[Mm]erge ]]; then
+                    KEY="${AUTHOR}::${FINAL_COMMIT_BLOCK}"
+                    if [[ ! "$FINAL_COMMIT_BLOCK" =~ ^[Mm]erge ]]; then
                       IS_UNIQUE=true
                       for existing_key in "${UNIQUE_KEYS[@]}"; do
                         if [[ "$existing_key" == "$KEY" ]]; then
@@ -144,7 +162,7 @@ runs:
                         FOUND=false
                         for j in "${!AUTHOR_LIST[@]}"; do
                           if [[ "${AUTHOR_LIST[$j]}" == "$AUTHOR" ]]; then
-                            AUTHOR_COMMITS_LIST[$j]+="* $MESSAGE"$'\n'
+                            AUTHOR_COMMITS_LIST[$j]+="${FINAL_COMMIT_BLOCK}"$'\n'
                             FOUND=true
                             break
                           fi
@@ -152,7 +170,7 @@ runs:
 
                         if ! $FOUND; then
                           AUTHOR_LIST+=("$AUTHOR")
-                          AUTHOR_COMMITS_LIST+=("* $MESSAGE"$'\n')
+                          AUTHOR_COMMITS_LIST+=("${FINAL_COMMIT_BLOCK}"$'\n')
                         fi
                       fi
                     fi
