@@ -1,5 +1,18 @@
 # Changelog
 
+## [v1.5.0] - 2025-05-28
+
+### Added
+
+- Added support for custom task IDs.
+- Added support for multiple IDs.
+- Added the option to use the full commit message.
+- Added parsing of Conventional Commit types.
+
+### Changed
+
+- Fixed minor syntax bug.
+
 ## [v1.4.2] - 2025-05-28
 
 ### Added
