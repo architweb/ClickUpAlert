@@ -140,8 +140,8 @@ runs:
                       MESSAGE=$(echo "$MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
 
                       # Detect and embolden only the Conventional Commit prefix
-                      if [[ "$MESSAGE" =~ ^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:) ]]; then
-                        PREFIX="${BASH_REMATCH[1]}"
+                      if echo "$MESSAGE" | grep -qE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)'; then
+                        PREFIX=$(echo "$MESSAGE" | grep -oE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)')
                         REST="${MESSAGE#$PREFIX }"
                         MESSAGE="**${PREFIX}** ${REST}"
                       fi
