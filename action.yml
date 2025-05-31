@@ -22,7 +22,7 @@ inputs:
   full_commit_message:
     description: "Use the full commit message instead of the first line"
     required: false
-    default: ''
+    default: 'false'
 
 runs:
   using: "composite"
