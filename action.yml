@@ -105,7 +105,8 @@ runs:
                     [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
 
                     # Logic for full commit message mode
-                    if [[ "${{ inputs.full_commit_message }}" != "" ]]; then
+                    FULL_COMMIT_MESSAGE="${{ inputs.full_commit_message }}"
+                    if [[ -n "$FULL_COMMIT_MESSAGE" ]]; then
                       RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
 
                       # Inline task id(task)/custom task id(ctask) replacement
