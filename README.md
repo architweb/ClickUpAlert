@@ -42,12 +42,13 @@ Simply copy them from the link.
 
 The action requires the following inputs to connect to ClickUp and identify your project, make sure to add them as secrets to your GitHub repository:
 
-| Input                  | Description                                               | Required | Default |
-| ---------------------- | --------------------------------------------------------- | -------- | ------- |
-| `clickup_api_token`    | Your ClickUp API token (Personal or Bot)                  | Yes      | `none`  |
-| `clickup_workspace_id` | The numerical ID of the ClickUp Workspace (Team)          | Yes      | `none`  |
-| `clickup_channel_id`   | The ID of the ClickUp List or Chat View for notifications | Yes      | `none`  |
-| `clickup_project_name` | A descriptive name for your project (used in the message) | Yes      | `none`  |
+| Input                  | Description                                               | Type              | Required | Default |
+| ---------------------- | --------------------------------------------------------- | ----------------- | -------- | ------- |
+| `clickup_api_token`    | Your ClickUp API token (Personal or Bot)                  | string            | Yes      | `none`  |
+| `clickup_workspace_id` | The numerical ID of the ClickUp Workspace (Team)          | string            | Yes      | `none`  |
+| `clickup_channel_id`   | The ID of the ClickUp List or Chat View for notifications | string            | Yes      | `none`  |
+| `clickup_project_name` | A descriptive name for your project (used in the message) | string            | Yes      | `none`  |
+| `full_commit_message`  | A flag to indicate whether to use full commit messages    | "true" \| "false" | No       | `false` |
 
 ## Task ID Integration
 
@@ -55,14 +56,13 @@ You can link commit messages directly to ClickUp tasks by including a task ID re
 
 ```
 task `TASK_ID` Your commit message here
-
 ctask `CUSTOM_TASK_ID` Your commit message here
 ```
 
 For example:
+
 ```
 task `86ddd0y92` Add new login functionality
-
 ctask `TST-747` Add global log out functionality
 ```
 
@@ -120,6 +120,6 @@ jobs:
           clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
           clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
           clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
-          # Comment out option below to disable and default to single line mode because it activates with any value, "true", "false", "banana"
-          full_commit_message: true
+          # Some other optional parameters
+          full_commit_message: "false" # Set to 'true' to include full commit messages
 ```
