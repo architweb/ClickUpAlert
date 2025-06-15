@@ -1,5 +1,12 @@
 # ClickUpNotification
 
+[![GitHub release](https://img.shields.io/github/v/release/architweb/ClickUpNotification?color=orange)](https://github.com/architweb/ClickUpNotification/releases)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-ClickUp%20Notification-blue.svg?colorA=24292e&colorB=0366d6&style=flat&longCache=true&logo=github)](https://github.com/marketplace/actions/clickup-notification)
+[![GitHub stars](https://img.shields.io/github/stars/architweb/ClickUpNotification?color=blue)](https://github.com/architweb/ClickUpNotification/stargazers)
+[![GitHub last commit](https://img.shields.io/github/last-commit/architweb/ClickUpNotification)](https://github.com/architweb/ClickUpNotification/commits)
+![GitHub Action](https://img.shields.io/badge/GitHub-Action-informational?style=flat&logo=github-actions&logoColor=white)
+[![License](https://img.shields.io/badge/license-MIT-black.svg)](https://opensource.org/licenses/MIT)
+
 **ClickUpNotification** is a GitHub Action that notifies your team via a ClickUp chat channel, keeping them informed about the progress of the CI/CD pipeline up to the point where this action is triggered.
 It summarizes the latest code changes, grouped by author and formatted as an organized changelog, along with the duration.
 
@@ -210,3 +217,59 @@ Comprehensive notification for important deployments:
     clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
     clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
 ```
+
+## Contributing
+
+We welcome contributions! Here's how you can help improve ClickUpNotification:
+
+### Development Setup
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Make your changes to the relevant step in `./steps/` or the main `action.yml`
+4. Test your changes locally with a test workflow
+5. Submit a pull request with a clear description of your changes
+
+### Contribution Guidelines
+
+- **Code Style**: Follow existing code patterns and formatting
+- **Testing**: Test your changes thoroughly before submitting
+- **Documentation**: Update README.md if you add new features or change behavior
+- **Commit Messages**: Use clear, descriptive commit messages
+- **Pull Requests**: Include a detailed description of what your PR does and why
+
+## Support
+
+If you encounter any issues or have questions, here are the ways to get help:
+
+### 📚 Documentation & Issues
+
+- **[GitHub Issues](https://github.com/architweb/ClickUpNotification/issues)** - Report bugs or request features
+- **[Changelog](https://github.com/architweb/ClickUpNotification/blob/release/production/CHANGELOG.md)** - View release notes and changes
+
+### 💬 Community & Contact
+
+- **GitHub**: [@architweb](https://github.com/architweb)
+
+### 🐛 Bug Reports
+
+When reporting bugs, please include:
+
+- GitHub Action version used
+- Complete error message/logs
+- Steps to reproduce
+- Expected vs actual behavior
+
+### ⭐ Show Your Support
+
+If this action helps your workflow, please consider:
+
+- ⭐ **Starring the repository**
+- 🍴 **Sharing it with your team**
+- 📝 **Contributing improvements**
+
+---
+
+**Made with ❤️ for the GitHub Actions community**
+
+_© 2025 ArchitWeb. Released under the [MIT License](https://opensource.org/licenses/MIT)._
