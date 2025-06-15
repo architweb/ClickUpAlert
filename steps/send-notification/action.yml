@@ -29,8 +29,8 @@ runs:
     - name: Send Notification
       shell: bash
       run: |
-        FORMATTED_DURATION="${{ steps.duration.outputs.FORMATTED_DURATION }}"
-        COMMIT_FILE="${{ steps.commits.outputs.COMMIT_FILE }}"
+        FORMATTED_DURATION="${{ inputs.formatted_duration }}"
+        COMMIT_FILE="${{ inputs.commit_file }}"
 
         TRIGGERING_USER_NAME=$(curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
