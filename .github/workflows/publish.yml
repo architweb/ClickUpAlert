@@ -77,3 +77,15 @@ jobs:
         run: |
           echo "::error::Release ${{ steps.package-info.outputs.version }} already exists."
           exit 1
+
+      - name: 📢 Send ClickUp Notification
+        if: success()
+        uses: architweb/ClickUpNotification@v2.0.0
+        with:
+          clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
+          clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
+          clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
+          clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
+          title: "New Release Created: ${{ steps.package-info.outputs.version }}"
+          description: "A new release has been created for ${{ steps.package-info.outputs.name }}.\n\nVersion: ${{ steps.package-info.outputs.version }}"
+          full_commit_message: 'true'
