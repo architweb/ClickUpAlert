@@ -72,7 +72,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: ❌ Skip Actions (Already Exists)
+      - name: ❌ Abort - Release Already Exists
         if: steps.check-tag.outputs.exists == 'true'
         run: |
-          echo "::warning::Release ${{ steps.package-info.outputs.version }} already exists. Skipping release creation."
+          echo "::error::Release ${{ steps.package-info.outputs.version }} already exists."
+          exit 1
