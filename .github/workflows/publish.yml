@@ -79,13 +79,17 @@ jobs:
           exit 1
 
       - name: 📢 Send ClickUp Notification
-        if: success()
+        if: always()
         uses: architweb/ClickUpNotification@v2.0.1
         with:
           clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
           clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
           clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
           clickup_project_name: ${{ secrets.CLICKUP_PROJECT_NAME }}
-          title: "New Release Created: ${{ steps.package-info.outputs.version }}"
-          description: "A new release has been created for ${{ steps.package-info.outputs.name }}.\n\nVersion: ${{ steps.package-info.outputs.version }}"
+          title: "Release ${{ steps.package-info.outputs.version }} Submitted"
+          description: |
+            **📊 Details:**
+            • **Package:** "${{ steps.package-info.outputs.name }}@${{ steps.package-info.outputs.version }}"
+            • **Workflow status:** ${{ job.status == 'success' && '✅ Success' || job.status == 'failure' && '❌ Failed' || '⚠️ Cancelled' }}
+            • **Release status:** ${{ steps.check-tag.outputs.exists == 'true' && '❌ Skipped' || '✅ Created' }}
           full_commit_message: "true"
