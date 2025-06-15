@@ -46,34 +46,26 @@ runs:
     - name: Set Environment Variables
       shell: bash
       run: |
-        echo "CLICKUP_API_TOKEN=${{ inputs.clickup_api_token }}" >> $GITHUB_ENV
         echo "CLICKUP_WORKSPACE_ID=${{ inputs.clickup_workspace_id }}" >> $GITHUB_ENV
-        echo "CLICKUP_CHANNEL_ID=${{ inputs.clickup_channel_id }}" >> $GITHUB_ENV
         echo "CLICKUP_PROJECT_NAME=${{ inputs.clickup_project_name }}" >> $GITHUB_ENV
         echo "GITHUB_TOKEN=${{ github.token }}" >> $GITHUB_ENV
-        echo "OWNER=$GITHUB_REPOSITORY_OWNER" >> $GITHUB_ENV
         echo "REPO_NAME=$(echo "$GITHUB_REPOSITORY" | cut -d '/' -f 2)" >> $GITHUB_ENV
-        echo "BRANCH_NAME=$GITHUB_REF_NAME" >> $GITHUB_ENV
-        echo "CURRENT_SHA=$GITHUB_SHA" >> $GITHUB_ENV
         echo "TRIGGERING_ACTOR=$GITHUB_ACTOR" >> $GITHUB_ENV
-        echo "RUN_ID=$GITHUB_RUN_ID" >> $GITHUB_ENV
-        echo "REPO=$GITHUB_REPOSITORY" >> $GITHUB_ENV
-        echo "FULL_COMMIT_MESSAGE=${{ inputs.full_commit_message }}" >> $GITHUB_ENV
 
     - name: ⏱️ Fetch Duration
       id: duration
       if: ${{ inputs.show_fetch_duration == 'true' }}
-      uses: ./steps/fetch-duration
+      uses: architweb/ClickUpNotification/steps/fetch-duration@v2.0.0
 
     - name: 📝 Fetch Commits
       id: commits
       if: ${{ inputs.show_changelog_commits == 'true' }}
-      uses: ./steps/fetch-commits
+      uses: architweb/ClickUpNotification/steps/fetch-commits@v2.0.0
       with:
         full_commit_message: ${{ inputs.full_commit_message }}
 
     - name: 📢 Send ClickUp Notification
-      uses: ./steps/send-notification
+      uses: architweb/ClickUpNotification/steps/send-notification@v2.0.0
       with:
         clickup_api_token: ${{ inputs.clickup_api_token }}
         clickup_workspace_id: ${{ inputs.clickup_workspace_id }}
