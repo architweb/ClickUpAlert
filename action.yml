@@ -19,10 +19,18 @@ inputs:
   clickup_project_name:
     description: "ClickUp Project Name for the message"
     required: true
+  show_fetch_duration:
+    description: "Show duration information in the notification"
+    required: false
+    default: "true"
+  show_changelog_commits:
+    description: "Show changelog commits in the notification"
+    required: false
+    default: "true"
   full_commit_message:
     description: "Use the full commit message instead of the first line"
     required: false
-    default: 'false'
+    default: "true"
 
 runs:
   using: "composite"
@@ -44,206 +52,24 @@ runs:
         echo "REPO=$GITHUB_REPOSITORY" >> $GITHUB_ENV
         echo "FULL_COMMIT_MESSAGE=${{ inputs.full_commit_message }}" >> $GITHUB_ENV
 
-    - name: Fetch Duration
+    - name: ⏱️ Fetch Duration
       id: duration
-      shell: bash
-      run: |
-        STARTED_AT=""
-        FORMATTED_DURATION="unknown"
+      if: ${{ inputs.show_fetch_duration == 'true' }}
+      uses: ./steps/fetch-duration
 
-        if command -v gh &> /dev/null; then
-          STARTED_AT=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq '.run_started_at' 2>/dev/null || echo "")
-
-          if [ -n "$STARTED_AT" ]; then
-            COMPLETED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-            if command -v date &> /dev/null; then
-              START_EPOCH=$(date -d "$STARTED_AT" +%s 2>/dev/null || echo "")
-              END_EPOCH=$(date -d "$COMPLETED_AT" +%s 2>/dev/null || echo "")
-
-              if [ -n "$START_EPOCH" ] && [ -n "$END_EPOCH" ]; then
-                DURATION=$((END_EPOCH - START_EPOCH))
-                FORMATTED_DURATION=$(printf "%02d:%02d" $((DURATION / 60)) $((DURATION % 60)))
-              fi
-            fi
-          fi
-        fi
-
-        echo "FORMATTED_DURATION=${FORMATTED_DURATION}" >> $GITHUB_OUTPUT
-
-    - name: Fetch Commits
+    - name: 📝 Fetch Commits
       id: commits
-      shell: bash
-      run: |
-        COMMIT_LIST_MD=""
+      if: ${{ inputs.show_changelog_commits == 'true' }}
+      uses: ./steps/fetch-commits
+      with:
+        full_commit_message: ${{ inputs.full_commit_message }}
 
-        if command -v gh &> /dev/null; then
-          WORKFLOW_ID=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/actions/runs/${GITHUB_RUN_ID}" --jq '.workflow_id' 2>/dev/null || echo "")
-
-          if [ -n "$WORKFLOW_ID" ]; then
-            PREVIOUS_SHA=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_ID}/runs?branch=${GITHUB_REF_NAME}&status=success&per_page=1" \
-              --jq '.workflow_runs[0].head_sha // empty' 2>/dev/null || echo "")
-
-            if [ -n "$PREVIOUS_SHA" ] && [ "$PREVIOUS_SHA" != "$GITHUB_SHA" ]; then
-              COMMITS_JSON=$(gh api "repos/${GITHUB_REPOSITORY_OWNER}/${REPO_NAME}/compare/${PREVIOUS_SHA}...${GITHUB_SHA}" \
-                --jq '[.commits[] | {sha: .sha, message: .commit.message, author: .commit.author.name}]' 2>/dev/null || echo "[]")
-
-              if [ "$COMMITS_JSON" != "[]" ] && [ -n "$COMMITS_JSON" ]; then
-                COMMIT_COUNT=$(echo "$COMMITS_JSON" | jq 'length')
-
-                if [ "$COMMIT_COUNT" -gt 0 ]; then
-                  COMMIT_LIST_MD="\n\n**Change Log:**\n"
-
-                  AUTHOR_LIST=()
-                  AUTHOR_COMMITS_LIST=()
-                  UNIQUE_KEYS=()
-
-                  for ((i=0; i<COMMIT_COUNT; i++)); do
-                    RAW_AUTHOR=$(echo "$COMMITS_JSON" | jq -r ".[$i].author")
-                    AUTHOR=$(echo "$RAW_AUTHOR" | tr -c '[:alnum:] ' ' ' | tr -s ' ')
-                    AUTHOR=$(echo "$AUTHOR" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-                    [ -z "$AUTHOR" ] && AUTHOR="Unknown Contributor"
-
-                    if [[ "${FULL_COMMIT_MESSAGE}" == "true" ]]; then
-                      RAW_MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message")
-
-                      FORMATTED_MESSAGE=$(echo "$RAW_MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
-                      FORMATTED_MESSAGE=$(echo "$FORMATTED_MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
-
-                      HEADER_LINE=$(echo "$FORMATTED_MESSAGE" | sed -n '1p')
-                      BODY_LINES=$(echo "$FORMATTED_MESSAGE" | sed '1d')
-
-                      if echo "$HEADER_LINE" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:'; then
-                        HEADER_LINE="**${HEADER_LINE}**"
-                      fi
-
-                      if echo "$BODY_LINES" | grep -qE '^\s*[\*\-\+]'; then
-
-                        INDENTED_BODY=$(echo "$BODY_LINES" | sed -E 's/^\s*([\*\-\+])/    \1   /')
-                      else
-                        INDENTED_BODY=$(echo "$BODY_LINES" | sed 's/^/    /')
-                      fi
-
-                      FINAL_COMMIT_BLOCK="*   ${HEADER_LINE}"
-                      [ -n "$BODY_LINES" ] && FINAL_COMMIT_BLOCK="${FINAL_COMMIT_BLOCK}"$'\n'"${INDENTED_BODY}"
-
-                    else
-                      MESSAGE=$(echo "$COMMITS_JSON" | jq -r ".[$i].message" | sed -n '1p')
-
-                      MESSAGE=$(echo "$MESSAGE" | sed -E "s/ctask \`([A-Za-z0-9\-]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/${CLICKUP_WORKSPACE_ID}\/\1)/g")
-                      MESSAGE=$(echo "$MESSAGE" | sed -E "s/task \`([0-9a-z]+)\`/[\`\1\`](https:\/\/app.clickup.com\/t\/\1)/g")
-
-                      if echo "$MESSAGE" | grep -qE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)'; then
-                        PREFIX=$(echo "$MESSAGE" | grep -oE '^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?(!)?:)')
-                        REST="${MESSAGE#$PREFIX }"
-                        MESSAGE="**${PREFIX}** ${REST}"
-                      fi
-
-                      FINAL_COMMIT_BLOCK="* ${MESSAGE}"
-                    fi
-
-                    KEY="${AUTHOR}::${FINAL_COMMIT_BLOCK}"
-                    if [[ ! "$FINAL_COMMIT_BLOCK" =~ ^[Mm]erge ]]; then
-                      IS_UNIQUE=true
-                      for existing_key in "${UNIQUE_KEYS[@]}"; do
-                        if [[ "$existing_key" == "$KEY" ]]; then
-                          IS_UNIQUE=false
-                          break
-                        fi
-                      done
-
-                      if $IS_UNIQUE; then
-                        UNIQUE_KEYS+=("$KEY")
-
-                        FOUND=false
-                        for j in "${!AUTHOR_LIST[@]}"; do
-                          if [[ "${AUTHOR_LIST[$j]}" == "$AUTHOR" ]]; then
-                            AUTHOR_COMMITS_LIST[$j]+="${FINAL_COMMIT_BLOCK}"$'\n'
-                            FOUND=true
-                            break
-                          fi
-                        done
-
-                        if ! $FOUND; then
-                          AUTHOR_LIST+=("$AUTHOR")
-                          AUTHOR_COMMITS_LIST+=("${FINAL_COMMIT_BLOCK}"$'\n')
-                        fi
-                      fi
-                    fi
-                  done
-
-                  for k in "${!AUTHOR_LIST[@]}"; do
-                    AUTHOR="${AUTHOR_LIST[$k]}"
-                    COMMITS="${AUTHOR_COMMITS_LIST[$k]}"
-                    if [ -n "$COMMITS" ]; then
-                      COMMIT_LIST_MD+=$'\n'"_*$AUTHOR:*_\n$COMMITS"
-                    fi
-                  done
-
-                  if [[ "$COMMIT_LIST_MD" == "\n\n**Change Log:**\n" ]]; then
-                    COMMIT_LIST_MD=""
-                  fi
-                fi
-              fi
-            fi
-          fi
-        fi
-
-        COMMIT_FILE=$(mktemp)
-        echo -e "$COMMIT_LIST_MD" > "$COMMIT_FILE"
-        echo "COMMIT_FILE=$COMMIT_FILE" >> $GITHUB_OUTPUT
-
-    - name: Send ClickUp Notification
-      shell: bash
-      run: |
-        FORMATTED_DURATION="${{ steps.duration.outputs.FORMATTED_DURATION }}"
-        COMMIT_FILE="${{ steps.commits.outputs.COMMIT_FILE }}"
-
-        TRIGGERING_USER_NAME=$(curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/users/${TRIGGERING_ACTOR}" | jq -r '.name // ""')
-
-        if [ -z "$TRIGGERING_USER_NAME" ]; then
-            TRIGGERING_USER_NAME="${TRIGGERING_ACTOR}"
-        fi
-
-        BASE_MESSAGE="🚀 **${CLICKUP_PROJECT_NAME}** deployed to **${GITHUB_REF_NAME}**"
-        DEPLOY_INFO="_Triggered by: ${TRIGGERING_USER_NAME}"
-        [ "$FORMATTED_DURATION" != "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}, Done in: ${FORMATTED_DURATION}min_"
-        [ "$FORMATTED_DURATION" == "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}_"
-
-        FINAL_MESSAGE="${BASE_MESSAGE}\n\n${DEPLOY_INFO}"
-
-        if [ -f "$COMMIT_FILE" ] && [ -s "$COMMIT_FILE" ]; then
-          COMMIT_LIST=$(cat "$COMMIT_FILE")
-          if [ -n "$COMMIT_LIST" ]; then
-            FINAL_MESSAGE="${FINAL_MESSAGE}${COMMIT_LIST}"
-          fi
-        fi
-
-        MESSAGE_FILE=$(mktemp)
-        echo -e "$FINAL_MESSAGE" > "$MESSAGE_FILE"
-
-        PAYLOAD_FILE=$(mktemp)
-        jq -n --arg content "$(cat "$MESSAGE_FILE")" '{
-          type: "message",
-          content_format: "text/md",
-          content: $content
-        }' > "$PAYLOAD_FILE"
-
-        RESPONSE_FILE=$(mktemp)
-        HTTP_CODE=$(curl -s -o "$RESPONSE_FILE" -w "%{http_code}" \
-          -X POST \
-          -H "Content-Type: application/json" \
-          -H "Authorization: ${{ inputs.clickup_api_token }}" \
-          -d @"$PAYLOAD_FILE" \
-          "https://api.clickup.com/api/v3/workspaces/${{ inputs.clickup_workspace_id }}/chat/channels/${{ inputs.clickup_channel_id }}/messages")
-
-        rm -f "$MESSAGE_FILE" "$PAYLOAD_FILE" "$COMMIT_FILE" "$RESPONSE_FILE"
-
-        if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
-          echo "--- ClickUp notification sent successfully ---"
-        else
-          echo "::error::Failed to send notification to ClickUp. HTTP code: $HTTP_CODE"
-          exit 1
-        fi
+    - name: 📢 Send ClickUp Notification
+      uses: ./steps/send-notification
+      with:
+        clickup_api_token: ${{ inputs.clickup_api_token }}
+        clickup_workspace_id: ${{ inputs.clickup_workspace_id }}
+        clickup_channel_id: ${{ inputs.clickup_channel_id }}
+        clickup_project_name: ${{ inputs.clickup_project_name }}
+        formatted_duration: ${{ inputs.show_fetch_duration == 'true' && steps.duration.outputs.formatted_duration || 'unknown' }}
+        commit_file: ${{ inputs.show_changelog_commits == 'true' && steps.commits.outputs.commit_file || '' }}

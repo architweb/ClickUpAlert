@@ -1,0 +1,82 @@
+name: "📢 Send ClickUp Notification"
+description: "Sends notification to ClickUp with deployment information"
+
+inputs:
+  clickup_api_token:
+    description: "ClickUp API Token"
+    required: true
+  clickup_workspace_id:
+    description: "ClickUp Workspace ID"
+    required: true
+  clickup_channel_id:
+    description: "ClickUp Channel ID"
+    required: true
+  clickup_project_name:
+    description: "ClickUp Project Name for the message"
+    required: true
+  formatted_duration:
+    description: "Formatted duration from duration step"
+    required: false
+    default: "unknown"
+  commit_file:
+    description: "Path to commit changelog file"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Send Notification
+      shell: bash
+      run: |
+        FORMATTED_DURATION="${{ steps.duration.outputs.FORMATTED_DURATION }}"
+        COMMIT_FILE="${{ steps.commits.outputs.COMMIT_FILE }}"
+
+        TRIGGERING_USER_NAME=$(curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/users/${TRIGGERING_ACTOR}" | jq -r '.name // ""')
+
+        if [ -z "$TRIGGERING_USER_NAME" ]; then
+            TRIGGERING_USER_NAME="${TRIGGERING_ACTOR}"
+        fi
+
+        BASE_MESSAGE="🚀 **${CLICKUP_PROJECT_NAME}** deployed to **${GITHUB_REF_NAME}**"
+        DEPLOY_INFO="_Triggered by: ${TRIGGERING_USER_NAME}"
+        [ "$FORMATTED_DURATION" != "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}, Done in: ${FORMATTED_DURATION}min_"
+        [ "$FORMATTED_DURATION" == "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}_"
+
+        FINAL_MESSAGE="${BASE_MESSAGE}\n\n${DEPLOY_INFO}"
+
+        if [ -f "$COMMIT_FILE" ] && [ -s "$COMMIT_FILE" ]; then
+          COMMIT_LIST=$(cat "$COMMIT_FILE")
+          if [ -n "$COMMIT_LIST" ]; then
+            FINAL_MESSAGE="${FINAL_MESSAGE}${COMMIT_LIST}"
+          fi
+        fi
+
+        MESSAGE_FILE=$(mktemp)
+        echo -e "$FINAL_MESSAGE" > "$MESSAGE_FILE"
+
+        PAYLOAD_FILE=$(mktemp)
+        jq -n --arg content "$(cat "$MESSAGE_FILE")" '{
+          type: "message",
+          content_format: "text/md",
+          content: $content
+        }' > "$PAYLOAD_FILE"
+
+        RESPONSE_FILE=$(mktemp)
+        HTTP_CODE=$(curl -s -o "$RESPONSE_FILE" -w "%{http_code}" \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -H "Authorization: ${{ inputs.clickup_api_token }}" \
+          -d @"$PAYLOAD_FILE" \
+          "https://api.clickup.com/api/v3/workspaces/${{ inputs.clickup_workspace_id }}/chat/channels/${{ inputs.clickup_channel_id }}/messages")
+
+        rm -f "$MESSAGE_FILE" "$PAYLOAD_FILE" "$COMMIT_FILE" "$RESPONSE_FILE"
+
+        if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+          echo "--- ClickUp notification sent successfully ---"
+        else
+          echo "::error::Failed to send notification to ClickUp. HTTP code: $HTTP_CODE"
+          exit 1
+        fi
