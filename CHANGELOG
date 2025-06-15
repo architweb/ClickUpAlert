@@ -1,5 +1,54 @@
 # Changelog
 
+## [v2.0.0] - 2025-06-15
+
+### 🚀 Major Features
+
+- **Modular Architecture**: Complete refactoring into separate, reusable steps
+  - `⏱️ Fetch Duration` step for workflow time tracking
+  - `📝 Fetch Commits` step for changelog generation
+  - `📢 Send ClickUp Notification` step for message delivery
+- **Custom Title Support**: Add custom titles to override default deployment message
+- **Custom Description Support**: Add italic descriptions below the main message
+- **Configurable Components**: Independently enable/disable duration and changelog features
+
+### 🎨 Enhanced Message Format
+
+- **Smart Title Logic**: Custom title shows as "🚀 **branch** | **project** | **title**"
+- **Flexible Description**: Optional italic description positioned after deploy info
+- **Improved Message Flow**: Better structured notifications with consistent formatting
+
+### ⚙️ New Input Parameters
+
+- `title`: Custom title for notification messages (default: "")
+- `description`: Custom description displayed in italics (default: "")
+- `show_fetch_duration`: Control duration display (default: "true")
+- `show_changelog_commits`: Control changelog display (default: "true")
+
+### 🔧 Technical Improvements
+
+- **Better Error Handling**: Improved variable references and error checking
+- **Cleaner Code**: Separated concerns for better maintainability
+- **Independent Testing**: Each step can be tested and debugged separately
+- **Reusable Components**: Steps can be used in other workflows
+
+### 📋 Migration Guide
+
+Update your workflows to use `v2.0.0` and optionally add new parameters:
+
+```yaml
+- uses: architweb/ClickUpNotification@v2.0.0
+  with:
+    # ... existing required parameters ...
+    # New optional parameters:
+    title: "🎉 Production Release"
+    description: "Major feature update deployed"
+    show_fetch_duration: "true"
+    show_changelog_commits: "true"
+```
+
+---
+
 ## [v1.5.0] - 2025-05-31
 
 ### Added
