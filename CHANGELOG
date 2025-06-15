@@ -1,5 +1,11 @@
 # Changelog
 
+## [v2.0.1] - 2025-06-15
+
+### 🚨 Critical Bug Fix
+
+- **Fixed Path Resolution Issue**: Replaced relative step paths (`./steps/`) with full repository paths (`architweb/ClickUpNotification/steps/`) to prevent "Can't find action.yml" errors when used from external repositories
+
 ## [v2.0.0] - 2025-06-15
 
 ### 🚀 Major Features
@@ -34,10 +40,10 @@
 
 ### 📋 Migration Guide
 
-Update your workflows to use `v2.0.0` and optionally add new parameters:
+Update your workflows to use `v2.0.1` and optionally add new parameters:
 
 ```yaml
-- uses: architweb/ClickUpNotification@v2.0.0
+- uses: architweb/ClickUpNotification@v2.0.1
   with:
     # ... existing required parameters ...
     # New optional parameters:

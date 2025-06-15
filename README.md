@@ -88,7 +88,7 @@ Where the task ID becomes a clickable link to the task in ClickUp. This makes it
 
 ## Architecture
 
-**v2.0.0** introduces a modular architecture for better maintainability and flexibility:
+**v2.0.1** introduces a modular architecture for better maintainability and flexibility:
 
 ### Modular Steps
 
@@ -169,7 +169,7 @@ jobs:
       # - name: Deploy to Staging
       #   run: ./deploy_staging.sh      # Last step: Send ClickUp notification upon successful deployment
       - name: Send ClickUp Notification
-        uses: architweb/ClickUpNotification@v2.0.0 # Use the latest version of the action
+        uses: architweb/ClickUpNotification@v2.0.1 # Use the latest version of the action
         with:
           # Pass the required secrets to the action
           clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
@@ -192,7 +192,7 @@ Perfect for quick status updates:
 
 ```yaml
 - name: Quick Status Update
-  uses: architweb/ClickUpNotification@v2.0.0
+  uses: architweb/ClickUpNotification@v2.0.1
   with:
     clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
     clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
@@ -210,7 +210,7 @@ Comprehensive notification for important deployments:
 
 ```yaml
 - name: Production Release Notification
-  uses: architweb/ClickUpNotification@v2.0.0
+  uses: architweb/ClickUpNotification@v2.0.1
   with:
     clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
     clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}

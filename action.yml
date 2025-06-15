@@ -55,17 +55,17 @@ runs:
     - name: ⏱️ Fetch Duration
       id: duration
       if: ${{ inputs.show_fetch_duration == 'true' }}
-      uses: architweb/ClickUpNotification/steps/fetch-duration@v2.0.0
+      uses: architweb/ClickUpNotification/steps/fetch-duration@v2.0.1
 
     - name: 📝 Fetch Commits
       id: commits
       if: ${{ inputs.show_changelog_commits == 'true' }}
-      uses: architweb/ClickUpNotification/steps/fetch-commits@v2.0.0
+      uses: architweb/ClickUpNotification/steps/fetch-commits@v2.0.1
       with:
         full_commit_message: ${{ inputs.full_commit_message }}
 
     - name: 📢 Send ClickUp Notification
-      uses: architweb/ClickUpNotification/steps/send-notification@v2.0.0
+      uses: architweb/ClickUpNotification/steps/send-notification@v2.0.1
       with:
         clickup_api_token: ${{ inputs.clickup_api_token }}
         clickup_workspace_id: ${{ inputs.clickup_workspace_id }}
