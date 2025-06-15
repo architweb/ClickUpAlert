@@ -9,6 +9,3 @@ node_modules/
 # System files
 .DS_Store
 Thumbs.db
-
-# GitHub Actions temporary files
-.github/workflows/*.yml

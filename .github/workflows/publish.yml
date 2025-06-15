@@ -1,0 +1,78 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - release/production
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: "release/production"
+          fetch-depth: 0
+
+      - name: 📦 Get version from CHANGELOG
+        id: package-info
+        run: |
+          VERSION=$(grep -m 1 "## \[v" CHANGELOG | sed -n 's/^## \[\(v[^]]*\)\].*/\1/p')
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not extract version from CHANGELOG"
+            exit 1
+          fi
+          NAME=$(basename "$GITHUB_REPOSITORY")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: 📄 Extract latest changelog
+        id: changelog
+        run: |
+          START_LINE=$(grep -n "^## \[v[0-9]*\.[0-9]*\.[0-9]*\]" CHANGELOG | head -1 | cut -d: -f1)
+
+          if [ -z "$START_LINE" ]; then
+            echo "No version sections found in CHANGELOG"
+            echo "" > changelog_section.md
+          else
+            NEXT_LINE=$(grep -n "^## \[v[0-9]*\.[0-9]*\.[0-9]*\]" CHANGELOG | sed -n '2p' | cut -d: -f1)
+
+            if [ -z "$NEXT_LINE" ]; then
+              sed -n "${START_LINE},\$p" CHANGELOG > changelog_section.md
+            else
+              END_LINE=$((NEXT_LINE - 1))
+              sed -n "${START_LINE},${END_LINE}p" CHANGELOG > changelog_section.md
+            fi
+          fi
+
+          echo "changelog_file=changelog_section.md" >> $GITHUB_OUTPUT
+
+      - name: 🔃 Check if tag exists
+        id: check-tag
+        run: |
+          if git rev-parse "${{ steps.package-info.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🆕 Create Release
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          gh release create "${{ steps.package-info.outputs.version }}" \
+            --title "Release ${{ steps.package-info.outputs.version }}" \
+            --notes-file changelog_section.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ❌ Skip Actions (Already Exists)
+        if: steps.check-tag.outputs.exists == 'true'
+        run: |
+          echo "::warning::Release ${{ steps.package-info.outputs.version }} already exists. Skipping release creation."
