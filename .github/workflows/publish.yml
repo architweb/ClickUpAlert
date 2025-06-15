@@ -80,7 +80,7 @@ jobs:
 
       - name: 📢 Send ClickUp Notification
         if: success()
-        uses: architweb/ClickUpNotification@v2.0.0
+        uses: architweb/ClickUpNotification@v2.0.1
         with:
           clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
           clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
