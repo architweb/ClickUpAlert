@@ -31,6 +31,14 @@ inputs:
     description: "Use the full commit message instead of the first line"
     required: false
     default: "true"
+  title:
+    description: "Custom title for the notification message"
+    required: false
+    default: ""
+  description:
+    description: "Custom description for the notification message"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -71,5 +79,7 @@ runs:
         clickup_workspace_id: ${{ inputs.clickup_workspace_id }}
         clickup_channel_id: ${{ inputs.clickup_channel_id }}
         clickup_project_name: ${{ inputs.clickup_project_name }}
+        title: ${{ inputs.title }}
+        description: ${{ inputs.description }}
         formatted_duration: ${{ inputs.show_fetch_duration == 'true' && steps.duration.outputs.formatted_duration || 'unknown' }}
         commit_file: ${{ inputs.show_changelog_commits == 'true' && steps.commits.outputs.commit_file || '' }}

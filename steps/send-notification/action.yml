@@ -22,6 +22,14 @@ inputs:
     description: "Path to commit changelog file"
     required: false
     default: ""
+  title:
+    description: "Custom title for the notification message"
+    required: false
+    default: ""
+  description:
+    description: "Custom description for the notification message"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -40,12 +48,21 @@ runs:
             TRIGGERING_USER_NAME="${TRIGGERING_ACTOR}"
         fi
 
-        BASE_MESSAGE="🚀 **${CLICKUP_PROJECT_NAME}** deployed to **${GITHUB_REF_NAME}**"
+        if [ -n "${{ inputs.title }}" ]; then
+          BASE_MESSAGE="🚀 **${GITHUB_REF_NAME}** | **${CLICKUP_PROJECT_NAME}** | ${{ inputs.title }}"
+        else
+          BASE_MESSAGE="🚀 **${CLICKUP_PROJECT_NAME}** deployed to **${GITHUB_REF_NAME}**"
+        fi
+
         DEPLOY_INFO="_Triggered by: ${TRIGGERING_USER_NAME}"
         [ "$FORMATTED_DURATION" != "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}, Done in: ${FORMATTED_DURATION}min_"
         [ "$FORMATTED_DURATION" == "unknown" ] && DEPLOY_INFO="${DEPLOY_INFO}_"
 
-        FINAL_MESSAGE="${BASE_MESSAGE}\n\n${DEPLOY_INFO}"
+        if [ -n "${{ inputs.description }}" ]; then
+          FINAL_MESSAGE="${BASE_MESSAGE}\n\n${DEPLOY_INFO}\n\n_${{ inputs.description }}_"
+        else
+          FINAL_MESSAGE="${BASE_MESSAGE}\n\n${DEPLOY_INFO}"
+        fi
 
         if [ -f "$COMMIT_FILE" ] && [ -s "$COMMIT_FILE" ]; then
           COMMIT_LIST=$(cat "$COMMIT_FILE")
